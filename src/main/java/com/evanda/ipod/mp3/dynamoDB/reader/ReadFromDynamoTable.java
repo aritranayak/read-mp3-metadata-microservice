@@ -1,8 +1,10 @@
 package com.evanda.ipod.mp3.dynamoDB.reader;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import com.amazonaws.auth.EnvironmentVariableCredentialsProvider;
 import com.amazonaws.regions.Region;
@@ -20,12 +22,13 @@ import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.evanda.ipod.aws.utilities.CreateScanCondition;
 import com.evanda.ipod.aws.utilities.DynamoDBConnector;
 import com.evanda.ipod.aws.utilities.QueryScanDynamoDBTable;
-import com.evanda.ipod.dynamoDB.MusicInfo;
+import com.evanda.ipod.model.MusicInfo;
+import com.evanda.ipod.model.Response;
 
 /**
  * This Lambda is executed by a API call from the AWS API Gateway. This
  * represents the "get-all-unprocessed-uploads" into S3. The caller is expected
- * to get as response an array of JSON, containing all Metadata information
+ * to get as _response an array of JSON, containing all Metadata information
  * about the MP3 file.
  * 
  * <TODO> Retrieve records by username </TODO>
@@ -33,7 +36,7 @@ import com.evanda.ipod.dynamoDB.MusicInfo;
  * @author Aritra Nayak
  *
  */
-public class ReadFromDynamoTable implements RequestHandler<String, String> {
+public class ReadFromDynamoTable implements RequestHandler<Map<String, Object>, List<Response>> {
 
 	private final String FAILURE = "FAILURE";
 
@@ -47,7 +50,7 @@ public class ReadFromDynamoTable implements RequestHandler<String, String> {
 
 	private final String COLUMN_NAME_TO_QUERY_FROM = "processed";
 
-	public String handleRequest(String arg0, Context pContext) {
+	public List<Response> handleRequest(Map<String, Object> arg0, Context pContext) {
 
 		/**
 		 * Stores logger retrieved from AWS Context object
@@ -99,15 +102,32 @@ public class ReadFromDynamoTable implements RequestHandler<String, String> {
 		List<MusicInfo> _listOfUnprocessedItems = _queryMusicInfoTable.getQueryScanResults(TABLE_NAME,
 				(Condition) _filterCondition.returnCondition(ComparisonOperator.EQ, Integer.valueOf(0)));
 
+		List<Response> __responseList = null;
 		if (null != _listOfUnprocessedItems){
-			_listOfUnprocessedItems.forEach((_item) -> {
-				vLogger.log(_item.toString());
-			});
+			
+			__responseList = _listOfUnprocessedItems.stream()
+							.map(_musicInfo -> {
+								Response _response = new Response();
+								_response.setId(_musicInfo.getUuid());
+								_response.setAlbumName(_musicInfo.getAlbum());
+								_response.setArtist(_musicInfo.getArtist());
+								String _fileNameToShow = _musicInfo.getFileName();
+								if(null != _fileNameToShow){
+									String[] _splitString = _fileNameToShow.split("/");
+									int length = _splitString.length;
+									_fileNameToShow = _splitString[length - 1];
+								}
+								_response.setFileName(_fileNameToShow);
+								_response.setTitleName(_musicInfo.getTitle());
+								return _response;
+							})
+							.collect(Collectors.toList());
+			vLogger.log(SUCCESS);
 		}else{
 			vLogger.log("No items left for processing");
 		}
 			
-		return SUCCESS;
+		return __responseList;
 	}
 
 }

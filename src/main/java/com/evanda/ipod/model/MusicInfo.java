@@ -1,4 +1,4 @@
-package com.evanda.ipod.dynamoDB;
+package com.evanda.ipod.model;
 
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
 import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBRangeKey;
