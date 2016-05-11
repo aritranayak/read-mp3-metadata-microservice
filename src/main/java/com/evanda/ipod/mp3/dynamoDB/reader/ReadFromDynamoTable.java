@@ -1,6 +1,5 @@
 package com.evanda.ipod.mp3.dynamoDB.reader;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
